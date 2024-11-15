@@ -3,12 +3,15 @@ package org.example.jpatestapplication.config;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.jpatestapplication.RegionRepository.RegionRepository;
+import org.example.jpatestapplication.model.Kommune;
 import org.example.jpatestapplication.model.Region;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -28,62 +31,61 @@ public class InitData implements CommandLineRunner {
 
         for (Region region : regions) {
             regionRepository.save(region);
-            System.out.println(region);
-        }
-    }
-
-    public static List<Region> fetchRegions() throws Exception {
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .GET()
-                .uri(new URI("https://api.dataforsyningen.dk/regioner"))
-                .build();
-
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode root = objectMapper.readTree(response.body());
-
-        List<Region> regions_list = new ArrayList<>();
-        for (JsonNode node : root) {
-            String kode = node.get("kode").asText();
-            String navn = node.get("navn").asText();
-            String href = node.get("href").asText();
-            String regionsKode = node.get("regionskode").asText();
+            System.out.println("Gemt Region i database: " + region);
         }
 
-        return regions_list;
+        List<Kommune> kommuner = fetchKommuner(regions);
     }
 
-    public static List<Region> fetchKommuner(List<Region> regions) throws Exception {
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .GET()
-                .uri(new URI("https://api.dataforsyningen.dk/regioner"))
-                .build();
+    public static List<Region> fetchRegions() throws IOException, InterruptedException, URISyntaxException {
+        JsonNode root = InitData.getJsonFrom(new URI("https://api.dataforsyningen.dk/regioner"));
 
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode root = objectMapper.readTree(response.body());
-
-        List<Region> regions_list = new ArrayList<>();
+        List<Region> regions = new ArrayList<>();
         for (JsonNode node : root) {
-            String kode = node.get("kode").asText();
-            String navn = node.get("navn").asText();
-            String href = node.get("href").asText();
+            String regionKode = node.get("kode").asText();
+            String regionNavn = node.get("navn").asText();
+            String regionHref = node.get("href").asText();
+
+            regions.add(new Region(regionKode, regionNavn, regionHref));
+        }
+
+        return regions;
+    }
+
+    public static List<Kommune> fetchKommuner(List<Region> regions) throws IOException, InterruptedException, URISyntaxException {
+        JsonNode root = InitData.getJsonFrom(new URI("https://api.dataforsyningen.dk/kommuner"));
+
+        List<Kommune> kommuner = new ArrayList<>();
+        for (JsonNode node : root) {
+            String kommuneKode = node.get("kode").asText();
+            String kommuneNavn = node.get("navn").asText();
+            String kommuneHref = node.get("href").asText();
             String regionsKode = node.get("regionskode").asText();
 
             Region foundRegion = regions
                     .stream()
-                    .filter(region -> foundRegion.getKode() = regionsKode)
+                    .filter((region) -> region.getKode().equals(regionsKode))
                     .findFirst()
-                    .orElseThrow() = new NoSuchElementException(regionsKode);
+                    .orElseThrow(() -> new NoSuchElementException(regionsKode));
 
-            regions.add(new Region(kode, navn, href));
+            kommuner.add(new Kommune(kommuneKode, kommuneNavn, kommuneHref, foundRegion));
         }
 
-        return regions;
+        return kommuner;
+    }
+
+    private static JsonNode getJsonFrom(URI endpoint) throws IOException, InterruptedException {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .GET()
+                .uri(endpoint)
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(response.body());
+        return root;
     }
 
 }
