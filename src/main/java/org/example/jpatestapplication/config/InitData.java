@@ -14,6 +14,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Component
 public class InitData implements CommandLineRunner {
@@ -23,9 +24,6 @@ public class InitData implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // Region region = new Region();
-        // regionRepository.save(region);
-
         List<Region> regions = fetchRegions();
 
         for (Region region : regions) {
@@ -46,11 +44,41 @@ public class InitData implements CommandLineRunner {
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode root = objectMapper.readTree(response.body());
 
-        List<Region> regions = new ArrayList<>();
+        List<Region> regions_list = new ArrayList<>();
         for (JsonNode node : root) {
             String kode = node.get("kode").asText();
             String navn = node.get("navn").asText();
             String href = node.get("href").asText();
+            String regionsKode = node.get("regionskode").asText();
+        }
+
+        return regions_list;
+    }
+
+    public static List<Region> fetchKommuner(List<Region> regions) throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .GET()
+                .uri(new URI("https://api.dataforsyningen.dk/regioner"))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode root = objectMapper.readTree(response.body());
+
+        List<Region> regions_list = new ArrayList<>();
+        for (JsonNode node : root) {
+            String kode = node.get("kode").asText();
+            String navn = node.get("navn").asText();
+            String href = node.get("href").asText();
+            String regionsKode = node.get("regionskode").asText();
+
+            Region foundRegion = regions
+                    .stream()
+                    .filter(region -> foundRegion.getKode() = regionsKode)
+                    .findFirst()
+                    .orElseThrow() = new NoSuchElementException(regionsKode);
 
             regions.add(new Region(kode, navn, href));
         }
