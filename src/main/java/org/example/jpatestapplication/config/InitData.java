@@ -2,10 +2,10 @@ package org.example.jpatestapplication.config;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.example.jpatestapplication.RegionRepository.RegionRepository;
+import org.example.jpatestapplication.repository.KommuneRepository;
+import org.example.jpatestapplication.repository.RegionRepository;
 import org.example.jpatestapplication.model.Kommune;
 import org.example.jpatestapplication.model.Region;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -22,8 +22,15 @@ import java.util.NoSuchElementException;
 @Component
 public class InitData implements CommandLineRunner {
 
-    @Autowired
     private RegionRepository regionRepository;
+    private KommuneRepository kommuneRepository;
+    private HttpClient httpClient;
+
+    public InitData(RegionRepository regionRepository, KommuneRepository kommuneRepository, HttpClient httpClient) {
+        this.regionRepository = regionRepository;
+        this.kommuneRepository = kommuneRepository;
+        this.httpClient = httpClient;
+    }
 
     @Override
     public void run(String... args) throws Exception {
@@ -31,14 +38,19 @@ public class InitData implements CommandLineRunner {
 
         for (Region region : regions) {
             regionRepository.save(region);
-            System.out.println("Gemt Region i database: " + region);
         }
 
         List<Kommune> kommuner = fetchKommuner(regions);
+
+        for (Kommune kommune : kommuner) {
+            kommuneRepository.save(kommune);
+        }
+
+        System.out.println("Regioner: " + regions.size() + "\n" + "Kommuner: " + kommuner.size());
     }
 
-    public static List<Region> fetchRegions() throws IOException, InterruptedException, URISyntaxException {
-        JsonNode root = InitData.getJsonFrom(new URI("https://api.dataforsyningen.dk/regioner"));
+    public List<Region> fetchRegions() throws IOException, InterruptedException, URISyntaxException {
+        JsonNode root = this.getJsonFrom(new URI("https://api.dataforsyningen.dk/regioner"));
 
         List<Region> regions = new ArrayList<>();
         for (JsonNode node : root) {
@@ -52,8 +64,8 @@ public class InitData implements CommandLineRunner {
         return regions;
     }
 
-    public static List<Kommune> fetchKommuner(List<Region> regions) throws IOException, InterruptedException, URISyntaxException {
-        JsonNode root = InitData.getJsonFrom(new URI("https://api.dataforsyningen.dk/kommuner"));
+    public List<Kommune> fetchKommuner(List<Region> regions) throws IOException, InterruptedException, URISyntaxException {
+        JsonNode root = this.getJsonFrom(new URI("https://api.dataforsyningen.dk/kommuner"));
 
         List<Kommune> kommuner = new ArrayList<>();
         for (JsonNode node : root) {
@@ -74,14 +86,13 @@ public class InitData implements CommandLineRunner {
         return kommuner;
     }
 
-    private static JsonNode getJsonFrom(URI endpoint) throws IOException, InterruptedException {
-        HttpClient client = HttpClient.newHttpClient();
+    private JsonNode getJsonFrom(URI endpoint) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .GET()
                 .uri(endpoint)
                 .build();
 
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(response.body());

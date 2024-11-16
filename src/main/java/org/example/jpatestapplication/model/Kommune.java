@@ -21,6 +21,8 @@ public class Kommune {
         this.region = region;
     }
 
+    public Kommune() {}
+
     @ManyToOne
     @JoinColumn(name = "region_id", referencedColumnName = "id")
     private Region region;
@@ -60,4 +62,15 @@ public class Kommune {
     public void setRegion(Region region) {
         this.region = region;
     }
+
+    @Override
+    public String toString() {
+        return "Kommune: " +
+                "ID = " + id +
+                ", Kode = '" + kode + '\'' +
+                ", Navn = '" + navn + '\'' +
+                ", Href = '" + href + '\n' +
+                ", Region = " + region;
+    }
+
 }

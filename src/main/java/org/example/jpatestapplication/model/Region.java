@@ -25,7 +25,7 @@ package org.example.jpatestapplication.model;
     "href": "https://api.dataforsyningen.dk/regioner/1084",
     "kode": "1084",
     "navn": "Region Hovedstaden"
-  }
+    }
 }
  */
 
@@ -61,6 +61,8 @@ public class Region {
         this.navn = navn;
         this.href = href;
     }
+
+    public Region() {}
 
     public int getId() {
         return id;
