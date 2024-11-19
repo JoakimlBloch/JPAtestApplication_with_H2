@@ -17,7 +17,7 @@ public class RegionController {
     }
 
     @GetMapping("/regioner")
-    public List<Region> getAll() {
+    public List<Region> getRegions() {
         return regionRepository.findAll();
     }
 }

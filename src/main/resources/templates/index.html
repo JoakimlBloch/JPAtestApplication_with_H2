@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Index</title>
+</head>
+
+<body>
+    <div id="app">
+        <h2>Regionskoder</h2>
+        <ul>
+            <li v-for="regionskode in regionskoder">
+                {{ regionskode }}
+            </li>
+        </ul>
+
+        <h2>Regioner</h2>
+        <ul>
+            <li v-for="region in regioner">
+                <region :region="region"></region>
+            </li>
+        </ul>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.7/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.21.1/babel.min.js"></script>
+    <script type="text/babel">
+        const _app = new Vue({
+            el: '#app',
+            data : {
+                regionskoder: ["1081", "1082", "1083", "1084", "1085"],
+                regioner: [],
+            },
+            created() {
+                axios
+                    .get("/regioner")
+                    .then(response => {
+                        this.regioner = response.data;
+                    })
+                    .catch (error => {
+                    console.log(error);
+                    });
+            }
+        });
+
+        Vue.component('region', {
+          props: ['region'],
+            data() {
+              return {
+                  kommuner: []
+              };
+            },
+          template: `
+              <div class="region">
+                <h3><button @click="fetchKommuner(region.kode)">⬇️</button>{{ region.navn }}</h3>
+                <ul>
+                  <li v-for="kommune in kommuner">
+                    <kommune
+                        :kommune="kommune"
+                        @item-deleted="handleKommuneDeleted">
+                    </kommune>
+                  </li>
+                </ul>
+              </div>
+          `,
+            methods: {
+                fetchKommuner(regionskode) {
+                    axios
+                        .get("/kommuner", { params: { regionskode: regionskode } })
+                        .then(response => {
+                            this.kommuner = response.data;
+                        })
+                        .catch(error => {
+                            console.log(error);
+                        });
+                },
+                handleKommuneDeleted(id) {
+                    console.log("Så sletter vi bare kommunen " + id);
+                    this.kommuner = this.kommuner.filter(kommune => kommune.id !== id);
+                }
+            }
+        });
+
+        Vue.component('kommune', {
+            props: ['kommune'],
+            data() {
+                return {
+                    kommuner: []
+                };
+            },
+            template: `
+              <div class="kommune">
+                {{ kommune.navn }}
+                <button @click="removeKommune(kommune.id)">❌</button>
+              </div>
+            `,
+            methods: {
+                removeKommune(id) {
+                    axios
+                        .post("/kommuner/remove", null, { params: { id: id } })
+                        .then(response => {
+                            console.log("Om lidt sletter vi kommunen " + id);
+                            this.$emit('kommune-deleted', id);
+                        })
+                        .catch(error => {
+                            console.log(error);
+                        });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
